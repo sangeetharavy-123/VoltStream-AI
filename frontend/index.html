@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoltStream Feedback Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo { 
+            font-size: 1.8rem; 
+            font-weight: 900; 
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        nav { display: flex; gap: 1rem; align-items: center; }
+        nav button {
+            background: none;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64748b;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        nav button:hover {
+            background: #f1f5f9;
+            color: #667eea;
+        }
+        nav button.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .container { 
+            max-width: 1400px; 
+            margin: 2rem auto; 
+            padding: 0 2rem; 
+        }
+        
+        .page { 
+            display: none; 
+        }
+        .page.active { 
+            display: block; 
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .card h2 {
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .stat-box.green::before { background: linear-gradient(90deg, #10b981, #059669); }
+        .stat-box.orange::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+        .stat-box.blue::before { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+
+        .stat-number { 
+            font-size: 3.5rem; 
+            font-weight: 900; 
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stat-label { 
+            color: #64748b;
+            margin-top: 0.5rem;
+            font-weight: 600;
+        }
+
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            gap: 2rem; 
+        }
+
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            color: #475569;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.875rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .upload-area {
+            border: 3px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8fafc;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #667eea;
+            background: #eff6ff;
+        }
+
+        .upload-icon { font-size: 5rem; margin-bottom: 1rem; opacity: 0.7; }
+
+        .feedback-item {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 5px solid #3b82f6;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+
+        .feedback-item:hover {
+            transform: translateX(8px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .feedback-item.high { border-left-color: #ef4444; }
+        .feedback-item.medium { border-left-color: #f59e0b; }
+        .feedback-item.low { border-left-color: #10b981; }
+
+        .feedback-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+        }
+
+        .feedback-text {
+            color: #64748b;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        .feedback-footer {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .tag {
+            padding: 0.4rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .tag-priority { background: #fee2e2; color: #dc2626; }
+        .tag-owner { background: #dbeafe; color: #2563eb; }
+        .tag-source { background: #f3e8ff; color: #9333ea; }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .badge-new { background: #dbeafe; color: #1e40af; }
+        .badge-progress { background: #fef3c7; color: #b45309; }
+        .badge-complete { background: #d1fae5; color: #065f46; }
+
+        .badge:hover { transform: scale(1.08); }
+
+        /* Toggle Switch */
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .toggle-label {
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        .toggle-label.active {
+            color: #667eea;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #e2e8f0;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            left: 33px;
+        }
+
+        /* Chat Styles */
+        .chat-container {
+            background: white;
+            border-radius: 16px;
+            height: 550px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: #f8fafc;
+        }
+
+        .chat-msg {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-msg.user {
+            flex-direction: row-reverse;
+        }
+
+        .msg-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .msg-avatar.bot { 
+            background: linear-gradient(135deg, #667eea, #764ba2); 
+            color: white; 
+        }
+        .msg-avatar.user { 
+            background: #e2e8f0; 
+            color: #475569; 
+        }
+
+        .msg-content {
+            background: white;
+            padding: 1rem 1.25rem;
+            border-radius: 16px;
+            max-width: 75%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            line-height: 1.6;
+        }
+
+        .chat-msg.user .msg-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .chat-input {
+            padding: 1.25rem;
+            border-top: 2px solid #e2e8f0;
+            display: flex;
+            gap: 1rem;
+            background: white;
+            border-radius: 0 0 16px 16px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 0.875rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #94a3b8;
+        }
+
+        .empty-state-icon { 
+            font-size: 5rem; 
+            margin-bottom: 1rem; 
+            opacity: 0.5;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 1rem 1.25rem 1rem 3.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.25rem;
+            color: #94a3b8;
+        }
+
+        .filters {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .alert {
+            padding: 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .alert-success { background: #d1fae5; color: #065f46; border: 2px solid #10b981; }
+        .alert-danger { background: #fee2e2; color: #991b1b; border: 2px solid #ef4444; }
+        .alert-info { background: #dbeafe; color: #1e40af; border: 2px solid #3b82f6; }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+        }
+
+        .spinner {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 0 1rem; }
+            .grid { grid-template-columns: 1fr; }
+            nav { flex-wrap: wrap; gap: 0.5rem; }
+            .msg-content { max-width: 85%; }
+            .stats { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">⚡ VoltStream AI</div>
+        <nav>
+            <button class="nav-btn" data-page="feedback">📝 Submit Feedback</button>
+            <button class="nav-btn" data-page="home">🏠 Home</button>
+            <button class="nav-btn" data-page="import">📤 Import</button>
+            <button class="nav-btn" data-page="queue">📋 Queue</button>
+            <button class="nav-btn active" data-page="assistant">🤖 AI Assistant</button>
+        </nav>
+    </header>
+
+    <div class="container">
+        <!-- FEEDBACK FORM PAGE (NEW) -->
+        <div id="feedback" class="page">
+            <div class="card">
+                <h2>📝 Submit Your Feedback</h2>
+                <p style="color: #64748b; margin-bottom: 2rem;">
+                    Share your thoughts, report issues, or suggest improvements. Our AI will automatically prioritize your feedback!
+                </p>
+
+                <form id="userFeedbackForm">
+                    <div class="form-group">
+                        <label>Your Name (Optional)</label>
+                        <input type="text" id="userName" placeholder="e.g., John Doe">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Email (Optional)</label>
+                        <input type="email" id="userEmail" placeholder="your.email@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Feedback Title *</label>
+                        <input type="text" id="feedbackTitle" placeholder="Brief summary of your feedback" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Your Feedback *</label>
+                        <textarea id="feedbackMessage" rows="6" placeholder="Tell us what's on your mind... Be as detailed as you want!" required></textarea>
+                        <small style="color: #64748b;">💡 Tip: Use words like "urgent", "bug", or "critical" for faster attention</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Category (Optional)</label>
+                        <select id="feedbackCategory">
+                            <option value="AUTO">Let AI Decide</option>
+                            <option value="Bug">🐛 Bug Report</option>
+                            <option value="Feature">✨ Feature Request</option>
+                            <option value="Improvement">🔧 Improvement</option>
+                            <option value="Question">❓ Question</option>
+                            <option value="Complaint">😟 Complaint</option>
+                            <option value="Praise">😊 Praise</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full">
+                        ✨ Submit Feedback
+                    </button>
+                </form>
+
+                <div id="feedbackSuccess" style="display: none; margin-top: 2rem;">
+                    <div class="alert alert-success">
+                        ✅ Thank you! Your feedback has been submitted and prioritized by our AI system.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HOME PAGE -->
+        <div id="home" class="page">
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number" id="stat-total">0</div>
+                    <div class="stat-label">Total Feedback</div>
+                </div>
+                <div class="stat-box green">
+                    <div class="stat-number" id="stat-high">0</div>
+                    <div class="stat-label">High Priority</div>
+                </div>
+                <div class="stat-box orange">
+                    <div class="stat-number" id="stat-pending">0</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+                <div class="stat-box blue">
+                    <div class="stat-number" id="stat-complete">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <h2>🎯 Quick Actions</h2>
+                    <div class="quick-actions">
+                        <button class="btn btn-primary btn-full" data-page="feedback">📝 Submit Feedback</button>
+                        <button class="btn btn-secondary btn-full" data-page="import">📤 Import Bulk Data</button>
+                        <button class="btn btn-secondary btn-full" data-page="queue">📋 View All Items</button>
+                        <button class="btn btn-secondary btn-full" data-page="assistant">🤖 AI Assistant</button>
+                        <button class="btn btn-secondary btn-full" id="exportBtn">💾 Export Data</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>🔥 Recent High Priority</h2>
+                    <div id="high-priority-list">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">✅</div>
+                            <p>No high priority items</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📊 Quick Insights</h2>
+                <div id="insights-container" style="line-height: 2; color: #64748b;">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p style="margin-top: 1rem;">Loading insights...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- IMPORT PAGE -->
+        <div id="import" class="page">
+            <div class="card">
+                <h2>📤 Import Feedback</h2>
+                <p style="color: #64748b; margin-bottom: 2rem; font-size: 1.1rem;">
+                    Upload CSV/Excel files or paste feedback directly. The AI will automatically prioritize everything!
+                </p>
+
+                <div class="grid">
+                    <div>
+                        <h3 style="margin-bottom: 1rem; color: #1e293b;">📁 File Upload</h3>
+                        <div class="upload-area" id="uploadZone">
+                            <div class="upload-icon">📁</div>
+                            <h3>Drag & Drop Files Here</h3>
+                            <p style="color: #64748b; margin: 0.75rem 0;">or click to browse</p>
+                            <p style="color: #94a3b8; font-size: 0.9rem;">Supports CSV, XLSX, XLS, TXT</p>
+                            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.txt" multiple style="display: none;">
+                        </div>
+                        <div id="uploadStatus"></div>
+                    </div>
+
+                    <div>
+                        <h3 style="margin-bottom: 1rem; color: #1e293b;">✍️ Quick Paste</h3>
+                        <form id="pasteForm">
+                            <div class="form-group">
+                                <label>Title</label>
+                                <input type="text" id="pasteTitle" placeholder="e.g., TICKET-123: Login Issue" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Feedback</label>
+                                <textarea id="pasteText" rows="5" placeholder="Paste customer feedback here..." required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Source</label>
+                                <select id="pasteSource">
+                                    <option value="AUTO">Auto Detect</option>
+                                    <option value="Zendesk">Zendesk</option>
+                                    <option value="Email">Email</option>
+                                    <option value="Slack">Slack</option>
+                                    <option value="Social">Social Media</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-full">Add Feedback</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>ℹ️ CSV Format Guide</h2>
+                <p style="margin-bottom: 1rem; color: #64748b;">Your CSV/Excel file should have these columns:</p>
+                <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px; font-family: monospace; border: 2px solid #e2e8f0;">
+                    <strong style="color: #10b981;">Required:</strong> <span style="color: #667eea;">text</span> (or feedback, description, comment)<br><br>
+                    <strong style="color: #3b82f6;">Optional:</strong> title, source, sentiment, owner, status
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn btn-secondary" id="sampleBtn">📥 Download Sample CSV</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- QUEUE PAGE -->
+        <div id="queue" class="page">
+            <div class="card">
+                <h2>📋 Feedback Queue</h2>
+
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Search feedback...">
+                </div>
+
+                <div class="filters">
+                    <button class="btn btn-primary" data-filter="all">All</button>
+                    <button class="btn btn-secondary" data-filter="high">🔴 High Priority</button>
+                    <button class="btn btn-secondary" data-filter="medium">🟡 Medium</button>
+                    <button class="btn btn-secondary" data-filter="low">🟢 Low</button>
+                    <button class="btn btn-secondary" data-filter="NEW">New</button>
+                    <button class="btn btn-secondary" data-filter="IN_PROGRESS">In Progress</button>
+                    <button class="btn btn-secondary" data-filter="COMPLETE">Complete</button>
+                </div>
+
+                <div id="feedbackList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>No feedback yet. Submit or import feedback to get started!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI ASSISTANT PAGE WITH TOGGLE -->
+        <div id="assistant" class="page active">
+            <div class="card">
+                <h2>🤖 AI Assistant</h2>
+                
+                <!-- Toggle Switch -->
+                <div class="toggle-container">
+                    <span class="toggle-label active" id="userLabel">👤 User Mode</span>
+                    <div class="toggle-switch" id="modeToggle">
+                        <div class="toggle-slider"></div>
+                    </div>
+                    <span class="toggle-label" id="teamLabel">👥 Product Team</span>
+                </div>
+
+                <!-- User Mode Instructions -->
+                <div id="userModeInstructions">
+                    <div class="alert alert-info">
+                        <strong>User Mode:</strong> Share your feedback naturally! Just type what's on your mind and I'll make sure it gets to the right team.
+                    </div>
+                </div>
+
+                <!-- Team Mode Instructions -->
+                <div id="teamModeInstructions" style="display: none;">
+                    <div class="alert alert-info">
+                        <strong>Product Team Mode:</strong> Ask me about feedback data, priorities, trends, and team workload.
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <!-- Quick Actions for Team Mode -->
+                <div class="card" id="teamQuickActions" style="display: none;">
+                    <h2>📊 Quick Questions</h2>
+                    <div class="quick-actions">
+                        <button class="btn btn-secondary btn-full" data-question="What are the top 3 priority issues?">Top 3 Issues</button>
+                        <button class="btn btn-secondary btn-full" data-question="Show quick wins">Show Quick Wins</button>
+                        <button class="btn btn-secondary btn-full" data-question="Team workload distribution">Team Workload</button>
+                        <button class="btn btn-secondary btn-full" data-question="Any critical bugs?">Critical Bugs</button>
+                        <button class="btn btn-secondary btn-full" data-question="Sentiment analysis">Sentiment Analysis</button>
+                        <button class="btn btn-secondary btn-full" data-question="Recent trends">Recent Trends</button>
+                    </div>
+                </div>
+
+                <!-- Chat Interface -->
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-msg">
+                            <div class="msg-avatar bot">AI</div>
+                            <div class="msg-content" id="initialMessage">
+                                Hi! 👋 I'm your AI assistant.<br><br>
+                                <strong>User Mode:</strong> Tell me your feedback and I'll handle the rest!<br>
+                                <strong>Team Mode:</strong> Ask me about feedback data and insights.<br><br>
+                                How can I help you today?
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput" placeholder="Type your message...">
+                        <button class="btn btn-primary" id="sendBtn">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let allFeedback = [];
+        let currentFilter = 'all';
+        let isUserMode = true; // true = User Mode, false = Team Mode
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', init);
+
+        function init() {
+            setupNavigation();
+            setupFileUpload();
+            setupForms();
+            setupChat();
+            setupToggle();
+            setupFilters();
+            loadFeedback();
+        }
+
+        // Navigation
+        function setupNavigation() {
+            document.querySelectorAll('.nav-btn, .btn[data-page]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const page = this.dataset.page;
+                    if (page) changePage(page);
+                });
+            });
+        }
+
+        function changePage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(page).classList.add('active');
+            document.querySelector(`.nav-btn[data-page="${page}"]`).classList.add('active');
+            
+            if (page === 'queue') renderFeedback();
+        }
+
+        // Toggle Setup
+        function setupToggle() {
+            const toggle = document.getElementById('modeToggle');
+            const userLabel = document.getElementById('userLabel');
+            const teamLabel = document.getElementById('teamLabel');
+            const userInstructions = document.getElementById('userModeInstructions');
+            const teamInstructions = document.getElementById('teamModeInstructions');
+            const teamQuickActions = document.getElementById('teamQuickActions');
+            const chatInput = document.getElementById('chatInput');
+
+            toggle.addEventListener('click', () => {
+                isUserMode = !isUserMode;
+                toggle.classList.toggle('active');
+                
+                if (isUserMode) {
+                    userLabel.classList.add('active');
+                    teamLabel.classList.remove('active');
+                    userInstructions.style.display = 'block';
+                    teamInstructions.style.display = 'none';
+                    teamQuickActions.style.display = 'none';
+                    chatInput.placeholder = 'Share your feedback naturally...';
+                } else {
+                    userLabel.classList.remove('active');
+                    teamLabel.classList.add('active');
+                    userInstructions.style.display = 'none';
+                    teamInstructions.style.display = 'block';
+                    teamQuickActions.style.display = 'block';
+                    chatInput.placeholder = 'Ask about feedback data...';
+                }
+            });
+        }
+
+        // File Upload
+        function setupFileUpload() {
+            const zone = document.getElementById('uploadZone');
+            const input = document.getElementById('fileInput');
+            
+            zone.onclick = () => input.click();
+            
+            zone.ondragover = (e) => {
+                e.preventDefault();
+                zone.classList.add('dragover');
+            };
+            
+            zone.ondragleave = () => {
+                zone.classList.remove('dragover');
+            };
+            
+            zone.ondrop = (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            };
+            
+            input.onchange = (e) => handleFiles(e.target.files);
+        }
+
+        function handleFiles(files) {
+            const status = document.getElementById('uploadStatus');
+            status.innerHTML = '<div class="alert alert-info">⏳ Processing files...</div>';
+            
+            let processed = 0;
+            let totalItems = 0;
+            
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const itemCount = processFile(e.target.result, file.name);
+                    totalItems += itemCount;
+                    processed++;
+                    
+                    if (processed === files.length) {
+                        status.innerHTML = `
+                            <div class="alert alert-success">
+                                ✅ Successfully processed ${files.length} file(s) with ${totalItems} feedback items!
+                            </div>
+                        `;
+                        setTimeout(() => status.innerHTML = '', 5000);
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        function processFile(content, filename) {
+            const lines = content.split('\n').filter(l => l.trim());
+            let count = 0;
+            
+            if (filename.endsWith('.csv')) {
+                const headers = lines[0].toLowerCase().split(',');
+                const textIdx = headers.findIndex(h => h.includes('text') || h.includes('feedback') || h.includes('description') || h.includes('comment'));
+                const titleIdx = headers.findIndex(h => h.includes('title') || h.includes('subject'));
+                const sourceIdx = headers.findIndex(h => h.includes('source'));
+                
+                if (textIdx === -1) {
+                    alert('CSV must have a column with "text", "feedback", "description", or "comment"');
+                    return 0;
+                }
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',');
+                    if (values[textIdx] && values[textIdx].trim()) {
+                        submitFeedback({
+                            title: titleIdx >= 0 ? values[titleIdx].trim() : `Feedback ${i}`,
+                            text: values[textIdx].trim(),
+                            source: sourceIdx >= 0 ? values[sourceIdx].trim() : 'CSV Import'
+                        });
+                        count++;
+                    }
+                }
+            } else {
+                lines.forEach((line, i) => {
+                    if (line.trim()) {
+                        submitFeedback({
+                            title: `Feedback ${i + 1}`,
+                            text: line.trim(),
+                            source: 'TXT Import'
+                        });
+                        count++;
+                    }
+                });
+            }
+            
+            return count;
+        }
+
+        // Forms Setup
+        function setupForms() {
+            // User Feedback Form
+            document.getElementById('userFeedbackForm').onsubmit = async (e) => {
+                e.preventDefault();
+                
+                const btn = e.target.querySelector('button[type="submit"]');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '⏳ Submitting...';
+                btn.disabled = true;
+                
+                const data = {
+                    title: document.getElementById('feedbackTitle').value,
+                    text: document.getElementById('feedbackMessage').value,
+                    source: 'User Submission'
+                };
+                
+                await submitFeedback(data);
+                
+                document.getElementById('feedbackSuccess').style.display = 'block';
+                e.target.reset();
+                
+                setTimeout(() => {
+                    document.getElementById('feedbackSuccess').style.display = 'none';
+                }, 5000);
+                
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            };
+
+            // Quick Paste Form
+            document.getElementById('pasteForm').onsubmit = async (e) => {
+                e.preventDefault();
+                
+                const btn = e.target.querySelector('button[type="submit"]');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '⏳ Analyzing...';
+                btn.disabled = true;
+                
+                const data = {
+                    title: document.getElementById('pasteTitle').value,
+                    text: document.getElementById('pasteText').value,
+                    source: document.getElementById('pasteSource').value
+                };
+                
+                if (data.source === 'AUTO') {
+                    const lower = data.text.toLowerCase();
+                    data.source = (lower.includes('bug') || lower.includes('error') || lower.includes('crash')) ? 'Zendesk' : 'Email';
+                }
+                
+                await submitFeedback(data);
+                
+                e.target.reset();
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                
+                showNotification('✅ Feedback added successfully!', 'success');
+            };
+
+            document.getElementById('exportBtn').onclick = downloadData;
+            document.getElementById('sampleBtn').onclick = downloadSample;
+        }
+
+        // Chat Setup
+        function setupChat() {
+            document.querySelectorAll('[data-question]').forEach(btn => {
+                btn.onclick = function() {
+                    askTeamQuestion(this.dataset.question);
+                };
+            });
+
+            document.getElementById('sendBtn').onclick = () => {
+                const input = document.getElementById('chatInput');
+                if (input.value.trim()) {
+                    if (isUserMode) {
+                        handleUserFeedback(input.value);
+                    } else {
+                        askTeamQuestion(input.value);
+                    }
+                    input.value = '';
+                }
+            };
+
+            document.getElementById('chatInput').onkeypress = (e) => {
+                if (e.key === 'Enter') document.getElementById('sendBtn').click();
+            };
+        }
+
+        // Handle User Mode - Submit feedback via chat
+        function handleUserFeedback(message) {
+            const chat = document.getElementById('chatMessages');
+            
+            // Show user message
+            chat.innerHTML += `
+                <div class="chat-msg user">
+                    <div class="msg-avatar user">U</div>
+                    <div class="msg-content">${message}</div>
+                </div>
+            `;
+            
+            // Submit to backend
+            submitFeedback({
+                title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+                text: message,
+                source: 'AI Chat'
+            });
+            
+            // AI Response
+            setTimeout(() => {
+                chat.innerHTML += `
+                    <div class="chat-msg">
+                        <div class="msg-avatar bot">AI</div>
+                        <div class="msg-content">
+                            ✅ Thank you! I've received your feedback and automatically:<br><br>
+                            • Analyzed the sentiment<br>
+                            • Detected keywords<br>
+                            • Assigned a priority score<br>
+                            • Routed to the right team<br><br>
+                            Your feedback is now in our system and the team will review it soon!
+                        </div>
+                    </div>
+                `;
+                chat.scrollTop = chat.scrollHeight;
+            }, 500);
+        }
+
+        // Handle Team Mode - Answer questions
+        function askTeamQuestion(question) {
+            const chat = document.getElementById('chatMessages');
+            
+            chat.innerHTML += `
+                <div class="chat-msg user">
+                    <div class="msg-avatar user">T</div>
+                    <div class="msg-content">${question}</div>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                const answer = generateAnswer(question);
+                chat.innerHTML += `
+                    <div class="chat-msg">
+                        <div class="msg-avatar bot">AI</div>
+                        <div class="msg-content">${answer}</div>
+                    </div>
+                `;
+                chat.scrollTop = chat.scrollHeight;
+            }, 500);
+        }
+
+        function generateAnswer(question) {
+            const q = question.toLowerCase();
+            
+            if (q.includes('top') || q.includes('priority') || q.includes('issue')) {
+                const top3 = allFeedback.slice(0, 3);
+                if (top3.length === 0) return "No feedback items yet. Import some feedback to get started!";
+                return `<strong>Top 3 Priority Items:</strong><br><br>${top3.map((f, i) => 
+                    `${i+1}. <strong>${f.title}</strong><br>Priority Score: ${f.priority} | Owner: ${f.owner}<br><br>`
+                ).join('')}`;
+            }
+            
+            if (q.includes('quick win')) {
+                const wins = allFeedback.filter(f => f.priority >= 16 && (f.owner === 'Support/Triage' || f.owner === 'Billing/Finance'));
+                if (wins.length === 0) return "No quick wins found. Quick wins are high-priority items that can be resolved quickly.";
+                return `<strong>Found ${wins.length} Quick Wins:</strong><br><br>${wins.slice(0, 5).map(f => 
+                    `• <strong>${f.title}</strong><br>Score: ${f.priority} | Team: ${f.owner}<br><br>`
+                ).join('')}`;
+            }
+            
+            if (q.includes('workload') || q.includes('team')) {
+                const teams = {};
+                allFeedback.forEach(f => {
+                    teams[f.owner] = (teams[f.owner] || 0) + 1;
+                });
+                if (Object.keys(teams).length === 0) return "No team data available yet.";
+                return `<strong>Team Workload Distribution:</strong><br><br>${Object.entries(teams).sort((a,b) => b[1] - a[1]).map(([team, count]) => 
+                    `• <strong>${team}</strong>: ${count} items<br>`
+                ).join('')}`;
+            }
+            
+            if (q.includes('bug') || q.includes('critical')) {
+                const bugs = allFeedback.filter(f => 
+                    f.text.toLowerCase().includes('bug') || 
+                    f.text.toLowerCase().includes('error') || 
+                    f.text.toLowerCase().includes('crash')
+                );
+                if (bugs.length === 0) return "Great news! No critical bugs reported recently. 🎉";
+                return `<strong>Found ${bugs.length} Bug Reports:</strong><br><br>${bugs.slice(0, 3).map(f => 
+                    `• <strong>${f.title}</strong><br>Priority: ${f.priority} | Status: ${f.status}<br><br>`
+                ).join('')}`;
+            }
+            
+            if (q.includes('sentiment')) {
+                const sentiments = {};
+                allFeedback.forEach(f => {
+                    sentiments[f.sentiment] = (sentiments[f.sentiment] || 0) + 1;
+                });
+                if (Object.keys(sentiments).length === 0) return "No sentiment data available.";
+                const total = allFeedback.length;
+                return `<strong>Sentiment Analysis:</strong><br><br>${Object.entries(sentiments).map(([sent, count]) => 
+                    `${sent === 'Positive' ? '😊' : sent === 'Negative' ? '😟' : '😐'} <strong>${sent}</strong>: ${count} (${((count/total)*100).toFixed(1)}%)<br>`
+                ).join('')}`;
+            }
+            
+            if (q.includes('trend')) {
+                const keywords = {};
+                allFeedback.forEach(f => {
+                    const words = f.text.toLowerCase().match(/\b\w{4,}\b/g) || [];
+                    words.forEach(word => {
+                        if (!['this', 'that', 'with', 'have', 'from'].includes(word)) {
+                            keywords[word] = (keywords[word] || 0) + 1;
+                        }
+                    });
+                });
+                const topKeywords = Object.entries(keywords).sort((a,b) => b[1] - a[1]).slice(0, 5);
+                if (topKeywords.length === 0) return "No trend data available yet.";
+                return `<strong>Top Trending Keywords:</strong><br><br>${topKeywords.map(([word, count]) => 
+                    `• <strong>${word}</strong>: ${count} mentions<br>`
+                ).join('')}`;
+            }
+            
+            return `I found <strong>${allFeedback.length}</strong> total feedback items:<br><br>
+                • High Priority: ${allFeedback.filter(f => getPriorityLevel(f.priority) === 'high').length}<br>
+                • Medium Priority: ${allFeedback.filter(f => getPriorityLevel(f.priority) === 'medium').length}<br>
+                • Low Priority: ${allFeedback.filter(f => getPriorityLevel(f.priority) === 'low').length}<br><br>
+                What specific information would you like?`;
+        }
+
+        // API Functions
+        async function submitFeedback(data) {
+            try {
+                const response = await fetch(`${API_URL}/feedback/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    await loadFeedback();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('⚠️ Cannot connect to server. Make sure backend is running!', 'danger');
+            }
+        }
+
+        async function loadFeedback() {
+            try {
+                const response = await fetch(`${API_URL}/feedback/all`);
+                allFeedback = await response.json();
+                updateStats();
+                updateInsights();
+                updateHighPriority();
+                renderFeedback();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function updateStatus(id, newStatus) {
+            try {
+                await fetch(`${API_URL}/feedback/update/${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                await loadFeedback();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Render Functions
+        function updateStats() {
+            document.getElementById('stat-total').textContent = allFeedback.length;
+            document.getElementById('stat-high').textContent = allFeedback.filter(f => getPriorityLevel(f.priority) === 'high').length;
+            document.getElementById('stat-pending').textContent = allFeedback.filter(f => f.status === 'NEW' || f.status === 'IN_PROGRESS').length;
+            document.getElementById('stat-complete').textContent = allFeedback.filter(f => f.status === 'COMPLETE').length;
+        }
+
+        function updateInsights() {
+            const insights = document.getElementById('insights-container');
+            if (allFeedback.length === 0) {
+                insights.innerHTML = `
+                    <div class="alert alert-info">
+                        👋 Welcome! Start by submitting feedback or importing data to see insights.
+                    </div>
+                `;
+                return;
+            }
+            
+            const highPriority = allFeedback.filter(f => getPriorityLevel(f.priority) === 'high').length;
+            const negative = allFeedback.filter(f => f.sentiment === 'Negative').length;
+            const teams = {};
+            allFeedback.forEach(f => {
+                teams[f.owner] = (teams[f.owner] || 0) + 1;
+            });
+            const busiestTeam = Object.entries(teams).sort((a, b) => b[1] - a[1])[0];
+            
+            insights.innerHTML = `
+                <p>🔥 <strong>${highPriority}</strong> high priority items need immediate attention</p>
+                <p>😟 <strong>${negative}</strong> negative sentiment feedback detected</p>
+                <p>👥 <strong>${busiestTeam ? busiestTeam[0] : 'N/A'}</strong> has the most work (${busiestTeam ? busiestTeam[1] : 0} items)</p>
+                <p>✅ <strong>${allFeedback.filter(f => f.status === 'COMPLETE').length}</strong> items completed</p>
+            `;
+        }
+
+        function updateHighPriority() {
+            const container = document.getElementById('high-priority-list');
+            const highItems = allFeedback.filter(f => getPriorityLevel(f.priority) === 'high' && f.status !== 'COMPLETE').slice(0, 3);
+            
+            if (highItems.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✅</div><p>No high priority items</p></div>';
+                return;
+            }
+            
+            container.innerHTML = highItems.map(item => `
+                <div class="feedback-item high" style="margin-bottom: 1rem;">
+                    <div class="feedback-title">${item.title}</div>
+                    <div class="feedback-text">${item.text.substring(0, 100)}...</div>
+                    <div class="feedback-footer">
+                        <span class="tag tag-priority">Score: ${item.priority}</span>
+                        <span class="tag tag-owner">${item.owner}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderFeedback() {
+            const container = document.getElementById('feedbackList');
+            let filtered = allFeedback;
+            
+            if (currentFilter !== 'all') {
+                if (['high', 'medium', 'low'].includes(currentFilter)) {
+                    filtered = allFeedback.filter(f => getPriorityLevel(f.priority) === currentFilter);
+                } else {
+                    filtered = allFeedback.filter(f => f.status === currentFilter);
+                }
+            }
+            
+            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase();
+            if (searchTerm) {
+                filtered = filtered.filter(f => 
+                    f.title.toLowerCase().includes(searchTerm) || 
+                    f.text.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No feedback matches your filter</p></div>';
+                return;
+            }
+            
+            container.innerHTML = filtered.map(item => {
+                const level = getPriorityLevel(item.priority);
+                const statusClass = item.status.toLowerCase().replace('_', '-');
+                
+                return `
+                    <div class="feedback-item ${level}">
+                        <div class="feedback-title">${item.title}</div>
+                        <div class="feedback-text">${item.text}</div>
+                        <div class="feedback-footer">
+                            <span class="tag tag-priority">Priority: ${item.priority}</span>
+                            <span class="tag tag-owner">${item.owner}</span>
+                            <span class="tag tag-source">${item.source}</span>
+                            <span class="badge badge-${statusClass}" onclick="cycleStatus(${item.id}, '${item.status}')">
+                                ${item.status.replace('_', ' ')}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getPriorityLevel(score) {
+            if (score >= 16) return 'high';
+            if (score >= 9) return 'medium';
+            return 'low';
+        }
+
+        function cycleStatus(id, currentStatus) {
+            const statusCycle = { 'NEW': 'IN_PROGRESS', 'IN_PROGRESS': 'COMPLETE', 'COMPLETE': 'NEW' };
+            updateStatus(id, statusCycle[currentStatus]);
+        }
+
+        // Filter Setup
+        function setupFilters() {
+            document.querySelectorAll('.filters .btn').forEach(btn => {
+                btn.onclick = function() {
+                    document.querySelectorAll('.filters .btn').forEach(b => {
+                        b.classList.remove('btn-primary');
+                        b.classList.add('btn-secondary');
+                    });
+                    this.classList.remove('btn-secondary');
+                    this.classList.add('btn-primary');
+                    
+                    currentFilter = this.dataset.filter;
+                    renderFeedback();
+                };
+            });
+
+            document.getElementById('searchInput')?.addEventListener('input', renderFeedback);
+        }
+
+        // Export Functions
+        function downloadData() {
+            if (allFeedback.length === 0) {
+                showNotification('No data to export', 'info');
+                return;
+            }
+            
+            const csv = convertToCSV(allFeedback);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `voltstream-export-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            showNotification('✅ Data exported successfully!', 'success');
+        }
+
+        function downloadSample() {
+            const sample = `title,text,source,sentiment
+TICKET-001,The app crashes when I try to checkout. Critical bug!,Zendesk,Negative
+TICKET-002,Love the new dashboard design! So much cleaner.,Email,Positive
+TICKET-003,Can you add dark mode? Would be great.,Social,Neutral
+TICKET-004,Charged twice for subscription. Need refund!,Zendesk,Negative
+TICKET-005,The search feature is really slow and confusing.,Email,Negative`;
+            
+            const blob = new Blob([sample], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'voltstream-sample.csv';
+            a.click();
+            showNotification('✅ Sample CSV downloaded!', 'success');
+        }
+
+        function convertToCSV(data) {
+            const headers = ['ID', 'Title', 'Text', 'Source', 'Sentiment', 'Priority', 'Owner', 'Status', 'Created'];
+            const rows = data.map(item => [
+                item.id,
+                `"${item.title.replace(/"/g, '""')}"`,
+                `"${item.text.replace(/"/g, '""')}"`,
+                item.source,
+                item.sentiment,
+                item.priority,
+                item.owner,
+                item.status,
+                item.created_at
+            ]);
+            
+            return [headers, ...rows].map(row => row.join(',')).join('\n');
+        }
+
+        // Notification System
+        function showNotification(message, type = 'info') {
+            const existingNotif = document.querySelector('.floating-notification');
+            if (existingNotif) existingNotif.remove();
+            
+            const notif = document.createElement('div');
+            notif.className = 'floating-notification';
+            notif.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : type === 'danger' ? '#ef4444' : '#3b82f6'};
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                z-index: 1000;
+                animation: slideInRight 0.3s;
+                font-weight: 600;
+            `;
+            notif.textContent = message;
+            document.body.appendChild(notif);
+            
+            setTimeout(() => {
+                notif.style.animation = 'slideOutRight 0.3s';
+                setTimeout(() => notif.remove(), 300);
+            }, 3000);
+        }
+    </script>
+    
+    <style>
+        @keyframes slideInRight {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+    </style>
+</body>
+</html>
